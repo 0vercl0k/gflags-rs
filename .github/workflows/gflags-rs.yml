@@ -1,0 +1,39 @@
+name: Builds
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Install latest rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        default: true
+
+    - name: Build dbg
+      run: cargo build
+
+    - name: Upload debug artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: gflags-rs.dbg
+        path: |
+          target/debug/gflags-rs.exe
+          target/debug/gflags_rs.pdb
+
+    - name: Build release
+      run: cargo build --release
+
+    - name: Upload release artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: gflags-rs
+        path: |
+          target/release/gflags-rs.exe
+          target/release/gflags_rs.pdb

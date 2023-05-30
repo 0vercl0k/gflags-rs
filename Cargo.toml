@@ -1,0 +1,25 @@
+[package]
+name = "gflags-rs"
+version = "0.1.0"
+edition = "2021"
+authors = ["Axel '0vercl0k' Souchet"]
+
+[dependencies]
+clap = { version = "4.3.0", features = ["derive"] }
+thiserror = "1.0.40"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies.windows]
+version = "0.48"
+features = [
+    "Win32_System_Registry", "Win32_Foundation"
+]
+
+[lib]
+name = "gflags"
+path = "src/lib.rs"
+
+[[bin]]
+name = "gflags-rs"
+path = "src/main.rs"
