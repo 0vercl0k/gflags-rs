@@ -89,7 +89,7 @@ impl Gflags {
 
         // Reads the GlobalFlag to figure out if PageHeap is turned on.
         let global_flags = subkey.read_dword(GLOBAL_FLAG_KEY_NAME).unwrap_or(0);
-        let pageheap_on = (global_flags & FLG_HEAP_PAGE_ALLOCS) == 0;
+        let pageheap_on = (global_flags & FLG_HEAP_PAGE_ALLOCS) != 0;
         let mut added_pageheap = false;
         if !pageheap_on {
             // If it's not turned on, then turn it on!
@@ -134,24 +134,21 @@ impl Gflags {
             v => Some(v?),
         };
 
-        // Let's track if we actually removed pageheap.
-        let mut have_removed_pageheap = false;
-
         // If we did read flags, let's check if PageHeap is even on.
         let has_pageheap_enabled = (global_flags.unwrap_or(0) & FLG_HEAP_PAGE_ALLOCS) != 0;
 
         // Also check if this is the only set bit.
         let only_pageheap_enabled = global_flags.unwrap_or(0) == FLG_HEAP_PAGE_ALLOCS;
 
-        // Untangle this mess..
-        match (has_pageheap_enabled, only_pageheap_enabled) {
+        // Let's track if we actually removed pageheap.
+        let have_removed_pageheap = match (has_pageheap_enabled, only_pageheap_enabled) {
             (true, true) => {
                 // PageHeap is enabled and this is the only bit turned on,
                 // so we can just remove the value entirely.
                 subkey.remove_value(GLOBAL_FLAG_KEY_NAME)?;
 
                 // We did remove pageheap!
-                have_removed_pageheap = true;
+                true
             }
             (true, false) => {
                 // PageHeap is enabled but other bits are set, so let's
@@ -160,18 +157,22 @@ impl Gflags {
                 subkey.write_dword(GLOBAL_FLAG_KEY_NAME, new_global_flags)?;
 
                 // We did remove pageheap!
-                have_removed_pageheap = true;
+                true
             }
-            _ => {}
+            _ => false,
         };
 
         // Grab the names of the values.
-        let value_names = subkey.iter_value_names().collect::<Result<Vec<_>>>()?;
+        let mut value_names = subkey.iter_value_names().collect::<Result<Vec<_>>>()?;
 
-        // If there's one named 'PageHeapFlag', then remove it
-        let has_pageheap_flags = value_names.iter().any(|v| v == PAGE_HEAP_FLAGS_KEY_NAME);
-        if has_pageheap_flags {
+        // Try to find a key named 'PageHeapFlag'.
+        let page_heap_flags_position = value_names
+            .iter()
+            .position(|v| v == PAGE_HEAP_FLAGS_KEY_NAME);
+        if let Some(position) = page_heap_flags_position {
+            // If we found one, let's remove it.
             subkey.remove_value(PAGE_HEAP_FLAGS_KEY_NAME)?;
+            value_names.remove(position);
         }
 
         // To be able to remove the key, we need two things:
